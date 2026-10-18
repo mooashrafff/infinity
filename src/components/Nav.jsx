@@ -1,0 +1,83 @@
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Menu, X } from 'lucide-react'
+import { NavLink } from './NavLink'
+import { NavSearch } from './NavSearch'
+import { links } from '../data/links'
+import { Button } from './Button'
+import logo from '../assets/logos/wordmark.png'
+
+
+export function Nav() {
+  const [open, setOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const [hidden, setHidden] = useState(false)
+  const burger = useRef(null)
+
+  useEffect(() => {
+    let last = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      setScrolled(y > 40)
+      // hide on scroll down, show on scroll up (ignore tiny jitters, always show near the top)
+      if (Math.abs(y - last) > 6) {
+        setHidden(y > 120 && y > last)
+        last = y
+      }
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      setOpen(false)
+      burger.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    // the menu covers the page, so keep keyboard and screen reader users out of it
+    const behind = document.querySelectorAll('main, footer')
+    behind.forEach((el) => { el.inert = true })
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+      behind.forEach((el) => { el.inert = false })
+    }
+  }, [open])
+
+  return (
+    <header className={`iv-nav${scrolled ? ' is-scrolled' : ''}${hidden && !open ? ' is-hidden' : ''}`}>
+      <div className="iv-nav__bar">
+      <Link to="/" className="iv-nav__logo"><img src={logo} alt="Infinity Vibes" /></Link>
+      <nav className="iv-nav__links" aria-label="Main">
+        {links.map((l) => <NavLink key={l.href} {...l} />)}
+      </nav>
+      <NavSearch className="iv-nav__searchform" inputClassName="iv-nav__search" />
+      <Button href="/destinations">Book now</Button>
+      <button ref={burger} className="iv-nav__burger" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls={open ? 'iv-menu' : undefined} onClick={() => setOpen(!open)}>
+        {open ? <X size={24} strokeWidth={2.25} /> : <Menu size={24} strokeWidth={2.25} />}
+      </button>
+      {open && (
+        <div className="iv-nav__menu" id="iv-menu">
+          <div className="iv-nav__decor" aria-hidden="true">
+            <svg className="iv-nav__spark" viewBox="0 0 100 100">
+              <path d="M50 0C54 32 68 46 100 50C68 54 54 68 50 100C46 68 32 54 0 50C32 46 46 32 50 0Z" />
+            </svg>
+          </div>
+          <nav aria-label="Main">
+            {links.map((l) => <NavLink key={l.href} {...l} onClick={() => setOpen(false)} />)}
+          </nav>
+          <div className="iv-nav__mfoot">
+          <NavSearch className="iv-nav__msearch" onDone={() => setOpen(false)} />
+          <Button href="/destinations" onClick={() => setOpen(false)}>Book now</Button>
+          </div>
+        </div>
+      )}
+      </div>
+    </header>
+  )
+}
